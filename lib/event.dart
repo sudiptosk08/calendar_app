@@ -89,47 +89,6 @@ class _TableEventsExampleState extends State<TableEventsExample> {
     }
   }
 
-  void _addEvent(Event event) {
-    if (_selectedDay != null) {
-      final events = _getEventsForDay(_selectedDay!);
-      setState(() {
-        events.add(event);
-        kEvents[_selectedDay!] = events;
-        _selectedEvents.value = events;
-      });
-    }
-  }
-
-  void _showAddEventDialog() {
-    final TextEditingController eventController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Add Event'),
-        content: TextField(
-          controller: eventController,
-          decoration: InputDecoration(hintText: 'Event Title'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              final event = Event(eventController.text);
-              _addEvent(event);
-              Navigator.pop(context);
-            },
-            child: Text('Add'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,11 +111,13 @@ class _TableEventsExampleState extends State<TableEventsExample> {
               eventLoader: _getEventsForDay,
               weekNumbersVisible: true,
               startingDayOfWeek: StartingDayOfWeek.monday,
+
               calendarStyle: const CalendarStyle(
                   isTodayHighlighted: false,
-                  selectedTextStyle: TextStyle(color: Colors.black),
+                  selectedTextStyle: const TextStyle(color: Colors.black),
                   cellAlignment: Alignment.topCenter,
                   markersMaxCount: 60),
+
               daysOfWeekVisible: true,
               daysOfWeekStyle: DaysOfWeekStyle(
                   weekdayStyle:
@@ -164,8 +125,11 @@ class _TableEventsExampleState extends State<TableEventsExample> {
               onDaySelected: _onDaySelected,
               onRangeSelected: _onRangeSelected,
               headerVisible: true,
+
+              // simpleSwipeConfig: ,
+
               daysOfWeekHeight: 90,
-              rowHeight: 140,
+              rowHeight: 400,
               availableGestures: AvailableGestures.none,
               onFormatChanged: (format) {
                 if (_calendarFormat != format) {
@@ -185,7 +149,7 @@ class _TableEventsExampleState extends State<TableEventsExample> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: events
-                            .take(30) // Limit to show only first 3 events
+                            .take(10) // Limit to show only first 3 events
                             .map((event) => Container(
                                   margin: const EdgeInsets.symmetric(
                                       horizontal: 1.5),
@@ -220,35 +184,7 @@ class _TableEventsExampleState extends State<TableEventsExample> {
                 },
               ),
             ),
-            const SizedBox(height: 30.0),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                // maximumSize:
-                minimumSize: const Size(300, 90),
-
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(
-                    Radius.circular(10),
-                  ),
-                ),
-              ),
-              onPressed: _showAddEventDialog,
-              child: Text('Add Event'),
-            ),
-            // ValueListenableBuilder<List<Event>>(
-            //   valueListenable: _selectedEvents,
-            //   builder: (context, value, _) {
-            //     return ListView.builder(
-            //       shrinkWrap: true,
-            //       itemCount: value.length,
-            //       itemBuilder: (context, index) {
-            //         return ListTile(
-            //           title: Text(value[index].title),
-            //         );
-            //       },
-            //     );
-            //   },
-            // ),
+            const SizedBox(height: 8.0),
           ],
         ),
       ),
