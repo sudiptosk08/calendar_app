@@ -4,25 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
-void main() {
-  runApp(MyApp());
-}
+class TableEventsCalendar extends StatefulWidget {
+  const TableEventsCalendar({super.key});
 
-class MyApp extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: TableEventsExample(),
-    );
-  }
+  // ignore: library_private_types_in_public_api
+  _TableEventsCalendarState createState() => _TableEventsCalendarState();
 }
 
-class TableEventsExample extends StatefulWidget {
-  @override
-  _TableEventsExampleState createState() => _TableEventsExampleState();
-}
-
-class _TableEventsExampleState extends State<TableEventsExample> {
+class _TableEventsCalendarState extends State<TableEventsCalendar> {
   late final ValueNotifier<List<Event>> _selectedEvents;
   CalendarFormat _calendarFormat = CalendarFormat.month;
   RangeSelectionMode _rangeSelectionMode = RangeSelectionMode.toggledOff;
@@ -89,6 +79,47 @@ class _TableEventsExampleState extends State<TableEventsExample> {
     }
   }
 
+  void _addEvent(Event event) {
+    if (_selectedDay != null) {
+      setState(() {
+        final events = _getEventsForDay(_selectedDay!);
+        events.add(event);
+        kEvents[_selectedDay!] = events;
+        _selectedEvents.value = events;
+      });
+    }
+  }
+
+  void _showAddEventDialog() {
+    final TextEditingController eventController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Event'),
+        content: TextField(
+          controller: eventController,
+          decoration: const InputDecoration(hintText: 'Event Title'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final event = Event(eventController.text);
+              _addEvent(event);
+              Navigator.pop(context);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -109,27 +140,38 @@ class _TableEventsExampleState extends State<TableEventsExample> {
               calendarFormat: _calendarFormat,
               rangeSelectionMode: _rangeSelectionMode,
               eventLoader: _getEventsForDay,
-              weekNumbersVisible: true,
+              weekNumbersVisible: false,
               startingDayOfWeek: StartingDayOfWeek.monday,
-
               calendarStyle: const CalendarStyle(
+                  selectedDecoration: BoxDecoration(
+                    color: Color.fromARGB(255, 255, 255, 255),
+                  ),
                   isTodayHighlighted: false,
-                  selectedTextStyle: const TextStyle(color: Colors.black),
+                  todayDecoration:
+                      BoxDecoration(color: Color.fromARGB(255, 186, 206, 239)),
+                  selectedTextStyle: TextStyle(color: Colors.black),
+                  cellPadding: EdgeInsets.zero,
+                  cellMargin: EdgeInsets.zero,
                   cellAlignment: Alignment.topCenter,
+                  canMarkersOverflow: false,
+                  tableBorder: TableBorder(
+                    verticalInside: BorderSide(color: Colors.blueGrey),
+                    horizontalInside: BorderSide(color: Colors.blueGrey),
+                    top: BorderSide(color: Colors.blueGrey),
+                    bottom: BorderSide(color: Colors.blueGrey),
+                  ),
                   markersMaxCount: 60),
-
               daysOfWeekVisible: true,
-              daysOfWeekStyle: DaysOfWeekStyle(
+              daysOfWeekStyle: const DaysOfWeekStyle(
                   weekdayStyle:
                       TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
               onDaySelected: _onDaySelected,
               onRangeSelected: _onRangeSelected,
               headerVisible: true,
-
-              // simpleSwipeConfig: ,
-
               daysOfWeekHeight: 90,
-              rowHeight: 400,
+              // rowHeight: ,
+              rowHeight: 120,
+
               availableGestures: AvailableGestures.none,
               onFormatChanged: (format) {
                 if (_calendarFormat != format) {
@@ -145,26 +187,33 @@ class _TableEventsExampleState extends State<TableEventsExample> {
                 markerBuilder: (context, date, events) {
                   if (events.isNotEmpty) {
                     return Positioned(
-                      bottom: 1,
+                      top: 30,
+                      left: 1,
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        verticalDirection: VerticalDirection.down,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.max,
                         children: events
-                            .take(10) // Limit to show only first 3 events
-                            .map((event) => Container(
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 1.5),
-                                  width: 208.0,
-                                  height: 20.0,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade300,
+                            .take(30) // Limit to show only first 3 events
+                            .map((event) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 1.0),
+                                  child: Container(
+                                    width: MediaQuery.of(context).size.width,
+                                    height: 20.0,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                    child: Text(
+                                      event.title,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                  child: Text('${event.title}'),
                                 ))
                             .toList(),
                       ),
                     );
                   }
-                  return SizedBox.shrink();
+                  return const SizedBox.expand();
                 },
                 dowBuilder: (context, day) {
                   return Center(
@@ -184,7 +233,33 @@ class _TableEventsExampleState extends State<TableEventsExample> {
                 },
               ),
             ),
-            const SizedBox(height: 8.0),
+            const SizedBox(height: 30.0),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(300, 90),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(10),
+                  ),
+                ),
+              ),
+              onPressed: _showAddEventDialog,
+              child: const Text('Add Event'),
+            ),
+            ValueListenableBuilder<List<Event>>(
+              valueListenable: _selectedEvents,
+              builder: (context, value, _) {
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: value.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text(value[index].title),
+                    );
+                  },
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -208,13 +283,7 @@ final kLastDay = DateTime(kToday.year, kToday.month + 3, kToday.day);
 final kEvents = LinkedHashMap<DateTime, List<Event>>(
   equals: isSameDay,
   hashCode: getHashCode,
-)..addAll(_kEventSource);
-
-final _kEventSource = {
-  for (var item in List.generate(60, (index) => index))
-    DateTime.utc(kFirstDay.year, kFirstDay.month, item * 5): List.generate(
-        item % 4 + 1, (index) => Event('Event $item | ${index + 1}'))
-};
+);
 
 int getHashCode(DateTime key) {
   return key.day * 100 + key.month * 1000 + key.year;
