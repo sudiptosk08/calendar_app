@@ -1,14 +1,14 @@
 import 'dart:collection';
-
+import 'package:calendar_app/model/events_model.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TableEventsCalendar extends StatefulWidget {
   const TableEventsCalendar({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _TableEventsCalendarState createState() => _TableEventsCalendarState();
 }
 
@@ -26,7 +26,9 @@ class _TableEventsCalendarState extends State<TableEventsCalendar> {
     super.initState();
 
     _selectedDay = _focusedDay;
-    _selectedEvents = ValueNotifier(_getEventsForDay(_selectedDay!));
+    _selectedEvents = ValueNotifier([]);
+
+    _fetchEventsFromFirestore();
   }
 
   @override
@@ -79,11 +81,16 @@ class _TableEventsCalendarState extends State<TableEventsCalendar> {
     }
   }
 
-  void _addEvent(Event event) {
+  void _addEvent(Event event) async {
+    final docRef = await FirebaseFirestore.instance
+        .collection('events')
+        .add(event.toFirestore());
+    final newEvent = Event(id: docRef.id, title: event.title, date: event.date);
+
     if (_selectedDay != null) {
       setState(() {
         final events = _getEventsForDay(_selectedDay!);
-        events.add(event);
+        events.add(newEvent);
         kEvents[_selectedDay!] = events;
         _selectedEvents.value = events;
       });
@@ -109,23 +116,43 @@ class _TableEventsCalendarState extends State<TableEventsCalendar> {
           ),
           TextButton(
             onPressed: () {
-              final event = Event(eventController.text);
+              final event = Event(
+                id: '',
+                title: eventController.text,
+                date: _selectedDay!,
+              );
               _addEvent(event);
               Navigator.pop(context);
             },
-            child: const Text('Add'),
+            child: const Text('Add Event'),
           ),
         ],
       ),
     );
   }
 
+  void _fetchEventsFromFirestore() async {
+    final snapshot =
+        await FirebaseFirestore.instance.collection('events').get();
+    final events = snapshot.docs.map((doc) {
+      return Event.fromFirestore(doc);
+    }).toList();
+
+    setState(() {
+      for (var event in events) {
+        final date = event.date;
+        if (kEvents[date] == null) {
+          kEvents[date] = [];
+        }
+        kEvents[date]!.add(event);
+      }
+      _selectedEvents.value = _getEventsForDay(_selectedDay!);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('TableCalendar - Events'),
-      ),
       body: SingleChildScrollView(
         scrollDirection: Axis.vertical,
         child: Column(
@@ -142,9 +169,12 @@ class _TableEventsCalendarState extends State<TableEventsCalendar> {
               eventLoader: _getEventsForDay,
               weekNumbersVisible: false,
               startingDayOfWeek: StartingDayOfWeek.monday,
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false,
+              ),
               calendarStyle: const CalendarStyle(
                   selectedDecoration: BoxDecoration(
-                    color: Color.fromARGB(255, 255, 255, 255),
+                    color: Color.fromARGB(255, 174, 207, 227),
                   ),
                   isTodayHighlighted: false,
                   todayDecoration:
@@ -169,9 +199,7 @@ class _TableEventsCalendarState extends State<TableEventsCalendar> {
               onRangeSelected: _onRangeSelected,
               headerVisible: true,
               daysOfWeekHeight: 90,
-              // rowHeight: ,
-              rowHeight: 120,
-
+              rowHeight: 450,
               availableGestures: AvailableGestures.none,
               onFormatChanged: (format) {
                 if (_calendarFormat != format) {
@@ -267,18 +295,10 @@ class _TableEventsCalendarState extends State<TableEventsCalendar> {
   }
 }
 
-class Event {
-  final String title;
-
-  const Event(this.title);
-
-  @override
-  String toString() => title;
-}
+final kFirstDay = DateTime(2021, 1, 1);
+final kLastDay = DateTime(2031, 12, 31);
 
 final kToday = DateTime.now();
-final kFirstDay = DateTime(kToday.year, kToday.month - 3, kToday.day);
-final kLastDay = DateTime(kToday.year, kToday.month + 3, kToday.day);
 
 final kEvents = LinkedHashMap<DateTime, List<Event>>(
   equals: isSameDay,
